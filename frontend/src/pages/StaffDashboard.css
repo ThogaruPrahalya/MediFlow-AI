@@ -1,0 +1,941 @@
+/* =========================================
+   MEDIFLOW AI - STAFF DASHBOARD
+   ========================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+.staff-page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  color: #172033;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* =========================================
+   HEADER
+   ========================================= */
+
+.staff-header {
+  width: 100%;
+  min-height: 78px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5eaf1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 14px 42px;
+
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.staff-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.staff-logo {
+  width: 48px;
+  height: 48px;
+
+  border-radius: 12px;
+
+  background: #0b63ce;
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-text h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #172033;
+}
+
+.brand-text h1 span {
+  color: #0b63ce;
+}
+
+.brand-text p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #68758a;
+}
+
+.staff-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* =========================================
+   HEADER BUTTONS
+   ========================================= */
+
+.refresh-btn,
+.emergency-btn {
+  border: none;
+  border-radius: 9px;
+
+  min-height: 42px;
+
+  padding: 0 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.refresh-btn {
+  background: #eef4fb;
+  color: #24527d;
+}
+
+.refresh-btn:hover {
+  background: #dfeaf7;
+}
+
+.emergency-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.emergency-btn:hover {
+  background: #c82333;
+}
+
+/* =========================================
+   MAIN
+   ========================================= */
+
+.staff-main {
+  width: min(1400px, calc(100% - 48px));
+  margin: 0 auto;
+
+  padding: 30px 0 50px;
+}
+
+/* =========================================
+   MESSAGE
+   ========================================= */
+
+.staff-message {
+  width: 100%;
+
+  background: #e9f4ff;
+  color: #145da0;
+
+  border: 1px solid #c9e3fb;
+  border-radius: 10px;
+
+  padding: 13px 16px;
+
+  margin-bottom: 22px;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* =========================================
+   STAT CARDS
+   ========================================= */
+
+.staff-stats {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin-bottom: 24px;
+}
+
+.staff-stat-card {
+  background: white;
+
+  border: 1px solid #e3e9f1;
+
+  border-radius: 14px;
+
+  min-height: 120px;
+
+  padding: 22px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 16px;
+
+  box-shadow:
+    0 3px 12px rgba(30, 55, 90, 0.05);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+
+  flex-shrink: 0;
+
+  border-radius: 11px;
+
+  background: #edf5ff;
+  color: #0b63ce;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.staff-stat-card p {
+  margin: 0 0 5px;
+
+  color: #6b778c;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.staff-stat-card h2 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 28px;
+  font-weight: 800;
+}
+
+/* =========================================
+   NOW SERVING
+   ========================================= */
+
+.now-serving-card {
+  background: #0b63ce;
+  color: white;
+
+  border-radius: 16px;
+
+  padding: 24px 28px;
+
+  margin-bottom: 25px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 25px;
+
+  box-shadow:
+    0 8px 24px rgba(11, 99, 206, 0.18);
+}
+
+.now-serving-content {
+  min-width: 0;
+}
+
+.now-serving-label {
+  margin: 0 0 7px;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  letter-spacing: 1.5px;
+
+  opacity: 0.85;
+}
+
+.now-serving-card h2 {
+  margin: 0 0 7px;
+
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.now-serving-card > div > p:last-child {
+  margin: 0;
+
+  font-size: 15px;
+  opacity: 0.9;
+}
+
+.complete-serving-btn {
+  flex-shrink: 0;
+
+  min-height: 48px;
+
+  padding: 0 20px;
+
+  border: none;
+  border-radius: 9px;
+
+  background: white;
+  color: #0b63ce;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.complete-serving-btn:hover {
+  background: #f1f6fc;
+  transform: translateY(-1px);
+}
+
+.complete-serving-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* =========================================
+   READY FOR NEXT PATIENT
+   ========================================= */
+
+.ready-next-card {
+  background: white;
+
+  border: 1px solid #dce5ef;
+
+  border-radius: 16px;
+
+  padding: 20px 24px;
+
+  margin-bottom: 25px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 15px;
+
+  box-shadow:
+    0 3px 12px rgba(30, 55, 90, 0.05);
+}
+
+.ready-icon {
+  width: 48px;
+  height: 48px;
+
+  flex-shrink: 0;
+
+  border-radius: 11px;
+
+  background: #eaf7ef;
+  color: #168447;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ready-next-card h2 {
+  margin: 0 0 5px;
+
+  color: #172033;
+
+  font-size: 19px;
+}
+
+.ready-next-card p {
+  margin: 0;
+
+  color: #68758a;
+
+  font-size: 14px;
+}
+
+.call-next-btn {
+  margin-left: auto;
+
+  min-height: 46px;
+
+  padding: 0 20px;
+
+  border: none;
+  border-radius: 9px;
+
+  background: #168447;
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.call-next-btn:hover {
+  background: #116c39;
+}
+
+.call-next-btn:disabled {
+  background: #b8c4cf;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   QUEUE SECTION
+   ========================================= */
+
+.queue-section {
+  background: white;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 16px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 3px 12px rgba(30, 55, 90, 0.05);
+}
+
+.section-heading {
+  padding: 23px 25px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  border-bottom: 1px solid #e7ecf2;
+}
+
+.section-heading h2 {
+  margin: 0 0 5px;
+
+  font-size: 21px;
+  font-weight: 800;
+
+  color: #172033;
+}
+
+.section-heading p {
+  margin: 0;
+
+  color: #718096;
+
+  font-size: 14px;
+}
+
+.queue-count {
+  background: #edf5ff;
+  color: #0b63ce;
+
+  padding: 8px 13px;
+
+  border-radius: 20px;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* =========================================
+   TABLE
+   ========================================= */
+
+.queue-table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+.queue-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  min-width: 900px;
+}
+
+.queue-table th {
+  background: #f7f9fc;
+
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  text-align: left;
+
+  padding: 15px 18px;
+
+  border-bottom: 1px solid #e3e8ef;
+
+  white-space: nowrap;
+}
+
+.queue-table td {
+  padding: 16px 18px;
+
+  color: #334155;
+
+  font-size: 14px;
+
+  border-bottom: 1px solid #edf0f4;
+
+  vertical-align: middle;
+}
+
+.queue-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.queue-table tbody tr:hover {
+  background: #fafcff;
+}
+
+/* =========================================
+   EMERGENCY ROW
+   ========================================= */
+
+.queue-table tr.emergency-row {
+  background: #fff7f7;
+}
+
+.queue-table tr.emergency-row:hover {
+  background: #fff1f1;
+}
+
+/* =========================================
+   TOKEN
+   ========================================= */
+
+.token-value {
+  color: #0b63ce;
+
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* =========================================
+   PATIENT NAME
+   ========================================= */
+
+.patient-name-cell {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  white-space: nowrap;
+}
+
+.patient-small-icon {
+  width: 30px;
+  height: 30px;
+
+  border-radius: 50%;
+
+  background: #edf3f9;
+  color: #50708e;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+}
+
+.patient-name-cell span {
+  font-weight: 600;
+}
+
+/* =========================================
+   EMERGENCY BADGE
+   ========================================= */
+
+.emergency-badge {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 4px 8px;
+
+  border-radius: 5px;
+
+  background: #ffe5e7;
+  color: #c82333;
+
+  font-size: 10px !important;
+  font-weight: 800 !important;
+
+  text-transform: uppercase;
+}
+
+/* =========================================
+   WAITING STATUS
+   ========================================= */
+
+.waiting-status {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px 10px;
+
+  border-radius: 20px;
+
+  background: #fff4d6;
+  color: #9a6700;
+
+  font-size: 12px;
+
+  font-weight: 800;
+}
+
+/* =========================================
+   CALL PATIENT BUTTON
+   ========================================= */
+
+.call-patient-btn {
+  min-height: 38px;
+
+  padding: 0 13px;
+
+  border: none;
+
+  border-radius: 7px;
+
+  background: #0b63ce;
+  color: white;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition: 0.2s ease;
+}
+
+.call-patient-btn:hover {
+  background: #084f9f;
+
+  transform: translateY(-1px);
+}
+
+.call-patient-btn:disabled {
+  background: #aeb9c6;
+
+  cursor: not-allowed;
+
+  transform: none;
+}
+
+/* =========================================
+   EMPTY QUEUE
+   ========================================= */
+
+.empty-queue {
+  height: 180px;
+
+  color: #78879a !important;
+
+  text-align: center;
+
+  font-size: 15px !important;
+}
+
+.empty-queue svg {
+  display: block;
+
+  margin: 0 auto 10px;
+
+  color: #168447;
+}
+
+/* =========================================
+   STAFF WORKFLOW
+   ========================================= */
+
+.staff-workflow {
+  margin-top: 25px;
+
+  background: white;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 16px;
+
+  padding: 24px 25px;
+
+  box-shadow:
+    0 3px 12px rgba(30, 55, 90, 0.05);
+}
+
+.staff-workflow h2 {
+  margin: 0 0 20px;
+
+  font-size: 19px;
+
+  color: #172033;
+}
+
+.workflow-steps {
+  display: flex;
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+.workflow-step {
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+}
+
+.workflow-step > span {
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #edf5ff;
+  color: #0b63ce;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.workflow-step strong {
+  display: block;
+
+  color: #27364a;
+
+  font-size: 13px;
+}
+
+.workflow-step p {
+  margin: 3px 0 0;
+
+  color: #7a8798;
+
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.workflow-arrow {
+  color: #a6b1bf;
+
+  font-size: 20px;
+
+  flex-shrink: 0;
+}
+
+/* =========================================
+   LOADING
+   ========================================= */
+
+.staff-loading {
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 12px;
+
+  color: #0b63ce;
+}
+
+.staff-loading p {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================
+   TABLET
+   ========================================= */
+
+@media (max-width: 1000px) {
+
+  .staff-header {
+    padding: 14px 25px;
+  }
+
+  .staff-main {
+    width: calc(100% - 30px);
+  }
+
+  .staff-stats {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .workflow-steps {
+    flex-wrap: wrap;
+  }
+
+  .workflow-step {
+    min-width: 220px;
+  }
+
+  .workflow-arrow {
+    display: none;
+  }
+}
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 650px) {
+
+  .staff-header {
+    min-height: auto;
+
+    padding: 14px 16px;
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 14px;
+  }
+
+  .staff-header-actions {
+    width: 100%;
+  }
+
+  .refresh-btn,
+  .emergency-btn {
+    flex: 1;
+  }
+
+  .staff-main {
+    width: calc(100% - 20px);
+
+    padding-top: 20px;
+  }
+
+  .staff-stats {
+    grid-template-columns: 1fr;
+
+    gap: 12px;
+  }
+
+  .staff-stat-card {
+    min-height: 95px;
+  }
+
+  .now-serving-card {
+    flex-direction: column;
+
+    align-items: stretch;
+
+    padding: 20px;
+  }
+
+  .complete-serving-btn {
+    width: 100%;
+  }
+
+  .ready-next-card {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .ready-icon {
+    align-self: flex-start;
+  }
+
+  .call-next-btn {
+    width: 100%;
+
+    margin-left: 0;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+
+    gap: 12px;
+
+    flex-direction: column;
+  }
+
+  .queue-count {
+    align-self: flex-start;
+  }
+
+  .staff-workflow {
+    padding: 20px;
+  }
+
+  .workflow-step {
+    width: 100%;
+  }
+}
