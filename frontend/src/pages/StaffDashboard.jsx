@@ -1,146 +1,64 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Clock3,
-  HeartPulse,
-  RefreshCw,
-  UserRound,
-  Users,
   PhoneCall,
+  CheckCircle,
+  AlertTriangle,
+  RefreshCw,
+  Users,
+  Clock,
+  Activity,
 } from "lucide-react";
 import "./StaffDashboard.css";
 
-const API = "http://localhost:5000/api";
-
-const consultationTime = {
-  "General Medicine": 6,
-  Cardiology: 8,
-  Orthopedics: 7,
-  Pediatrics: 5,
-  Emergency: 3,
-};
+const API = `${import.meta.env.VITE_API_URL}/api`;
 
 function StaffDashboard() {
+  const navigate = useNavigate();
+
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [callingToken, setCallingToken] = useState("");
-  const [completingToken, setCompletingToken] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
-  // =========================
-  // LOAD PATIENTS
-  // =========================
-
-  const loadPatients = async (showLoading = true) => {
+  const loadPatients = async () => {
     try {
-      if (showLoading) {
-        setLoading(true);
-      }
-
       const response = await fetch(`${API}/patients`);
 
       if (!response.ok) {
-        throw new Error("Could not connect to backend");
+        throw new Error("Failed to load patients");
       }
 
       const data = await response.json();
 
-      if (Array.isArray(data)) {
-        setPatients(data);
-      } else {
-        setPatients([]);
-      }
-
-      setMessage("");
+      setPatients(data);
     } catch (error) {
-      console.error("LOAD PATIENTS ERROR:", error);
-
-      setMessage(
-        "Backend connection failed. Make sure server.js is running on port 5000."
-      );
+      console.error("Staff dashboard error:", error);
     } finally {
-      if (showLoading) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
-  // =========================
-  // AUTO REFRESH
-  // =========================
-
   useEffect(() => {
-    loadPatients(true);
+    loadPatients();
 
     const interval = setInterval(() => {
-      loadPatients(false);
+      loadPatients();
     }, 5000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // =========================
-  // GET WAITING PATIENTS
-  // =========================
-
-  const getWaitingPatients = () => {
-    const waiting = patients.filter(
-      (patient) => patient.status === "Waiting"
-    );
-
-    return [...waiting].sort((a, b) => {
-      // Emergency patients first
+  const waitingPatients = patients
+    .filter((patient) => patient.status === "Waiting")
+    .sort((a, b) => {
       if (a.emergency && !b.emergency) return -1;
       if (!a.emergency && b.emergency) return 1;
 
-      // Then token number
-      const tokenA = String(a.token || "");
-      const tokenB = String(b.token || "");
-
-      const numberA =
-        parseInt(tokenA.replace(/\D/g, ""), 10) || 0;
-
-      const numberB =
-        parseInt(tokenB.replace(/\D/g, ""), 10) || 0;
-
-      return numberA - numberB;
+      return (
+        new Date(a.createdAt) -
+        new Date(b.createdAt)
+      );
     });
-  };
-
-  // =========================
-  // PATIENTS AHEAD
-  // =========================
-
-  const getPatientsAhead = (patient) => {
-    const waiting = getWaitingPatients();
-
-    return waiting.filter(
-      (item) =>
-        item.department === patient.department &&
-        item.token !== patient.token
-    ).length;
-  };
-
-  // =========================
-  // WAIT TIME
-  // =========================
-
-  const getWaitTime = (patient) => {
-    const ahead = getPatientsAhead(patient);
-
-    const time =
-      consultationTime[patient.department] || 6;
-
-    return ahead * time;
-  };
-
-  // =========================
-  // PATIENT LISTS
-  // =========================
-
-  const waitingPatients = getWaitingPatients();
 
   const servingPatients = patients.filter(
     (patient) => patient.status === "Serving"
@@ -150,514 +68,366 @@ function StaffDashboard() {
     (patient) => patient.status === "Completed"
   );
 
-  const currentPatient = servingPatients[0] || null;
+  const calculatePatientsAhead = (patient) => {
+    return waitingPatients.filter(
+      (item) =>
+        item.department === patient.department &&
+        new Date(item.createdAt) <
+          new Date(patient.createdAt)
+    ).length;
+  };
 
-  // =========================
-  // AVERAGE WAIT
-  // =========================
+  const calculateWait = (patient) => {
+    const times = {
+      "General Medicine": 6,
+      Cardiology: 8,
+      Orthopedics: 7,
+      Pediatrics: 5,
+      Dermatology: 6,
+      Neurology: 8,
+    };
 
-  const averageWait =
-    waitingPatients.length > 0
-      ? Math.round(
-          waitingPatients.reduce(
-            (total, patient) =>
-              total + getWaitTime(patient),
-            0
-          ) / waitingPatients.length
-        )
-      : 0;
+    const time = times[patient.department] || 6;
 
-  // =========================
-  // CALL PATIENT
-  // =========================
+    return calculatePatientsAhead(patient) * time;
+  };
 
   const callPatient = async (token) => {
-    if (!token) {
-      setMessage("Patient token is missing.");
-      return;
-    }
-
-    // Do not allow another patient while one is serving
     if (servingPatients.length > 0) {
-      setMessage(
-        "Please complete the current patient before calling the next patient."
+      alert(
+        "Please complete the current patient before calling another patient."
       );
       return;
     }
 
+    setActionLoading(true);
+
     try {
-      setCallingToken(token);
-      setMessage("");
-
-      console.log("Calling patient token:", token);
-
       const response = await fetch(
         `${API}/patients/call/${encodeURIComponent(token)}`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
         }
       );
 
-      const data = await response.json();
-
-      console.log("CALL RESPONSE:", data);
-
       if (!response.ok) {
-        throw new Error(
-          data.message || "Could not call patient"
-        );
+        throw new Error("Could not call patient");
       }
 
-      setMessage(
-        `${data.patient?.name || "Patient"} (${token}) is now being served.`
-      );
-
-      await loadPatients(false);
+      await loadPatients();
     } catch (error) {
-      console.error("CALL PATIENT ERROR:", error);
-
-      setMessage(
-        `Could not call patient: ${error.message}`
-      );
+      console.error(error);
+      alert("Unable to call patient.");
     } finally {
-      setCallingToken("");
+      setActionLoading(false);
     }
   };
 
-  // =========================
-  // COMPLETE PATIENT
-  // =========================
-
   const completePatient = async (token) => {
-    if (!token) {
-      setMessage("Patient token is missing.");
-      return;
-    }
+    setActionLoading(true);
 
     try {
-      setCompletingToken(token);
-      setMessage("");
-
       const response = await fetch(
         `${API}/patients/complete/${encodeURIComponent(token)}`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
         }
       );
 
-      const data = await response.json();
-
-      console.log("COMPLETE RESPONSE:", data);
-
       if (!response.ok) {
-        throw new Error(
-          data.message || "Could not complete patient"
-        );
+        throw new Error("Could not complete patient");
       }
 
-      setMessage(
-        `${data.patient?.name || "Patient"} (${token}) consultation completed.`
-      );
-
-      await loadPatients(false);
+      await loadPatients();
     } catch (error) {
-      console.error(
-        "COMPLETE PATIENT ERROR:",
-        error
-      );
-
-      setMessage(
-        `Could not complete patient: ${error.message}`
-      );
+      console.error(error);
+      alert("Unable to complete patient.");
     } finally {
-      setCompletingToken("");
+      setActionLoading(false);
     }
   };
 
-  // =========================
-  // CALL NEXT PATIENT
-  // =========================
-
-  const callNextPatient = () => {
+  const callNextPatient = async () => {
     if (servingPatients.length > 0) {
-      setMessage(
+      alert(
         "Please complete the current patient first."
       );
       return;
     }
 
     if (waitingPatients.length === 0) {
-      setMessage("There are no waiting patients.");
+      alert("No patients are waiting.");
       return;
     }
 
-    const nextPatient = waitingPatients[0];
-
-    callPatient(nextPatient.token);
+    await callPatient(waitingPatients[0].token);
   };
 
-  // =========================
-  // ADD EMERGENCY PATIENT
-  // =========================
-
   const addEmergencyPatient = async () => {
-    const name = window.prompt(
-      "Enter emergency patient name:"
+    const name = prompt(
+      "Enter emergency patient's name:"
     );
 
-    if (!name || !name.trim()) {
-      return;
-    }
+    if (!name || !name.trim()) return;
+
+    setActionLoading(true);
 
     try {
-      const emergencyToken =
-        "E" + Math.floor(100 + Math.random() * 900);
+      const tokenNumber =
+        patients.length + 1;
+
+      const patient = {
+        token: `E${tokenNumber}`,
+        name: name.trim(),
+        hospital: "MediFlow Demo Hospital",
+        department: "Emergency",
+        wait: 0,
+        patientsAhead: 0,
+        emergency: true,
+        status: "Waiting",
+      };
 
       const response = await fetch(`${API}/patients`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          token: emergencyToken,
-          name: name.trim(),
-          hospital: "MediFlow Demo Hospital",
-          department: "Emergency",
-          wait: 0,
-          patientsAhead: 0,
-          emergency: true,
-          status: "Waiting",
-        }),
+        body: JSON.stringify(patient),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Could not add emergency patient"
-        );
+        throw new Error("Could not add emergency patient");
       }
 
-      setMessage(
-        `Emergency patient ${name.trim()} added successfully.`
-      );
-
-      await loadPatients(false);
+      await loadPatients();
     } catch (error) {
-      console.error("EMERGENCY ERROR:", error);
-
-      setMessage(
-        `Could not add emergency patient: ${error.message}`
-      );
+      console.error(error);
+      alert("Unable to add emergency patient.");
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  // =========================
-  // LOADING SCREEN
-  // =========================
-
-  if (loading) {
-    return (
-      <div className="staff-page">
-        <div className="staff-loading">
-          <RefreshCw
-            size={30}
-            className="spin"
-          />
-
-          <p>Loading Staff Dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // =========================
-  // MAIN DASHBOARD
-  // =========================
+  const averageWait =
+    waitingPatients.length > 0
+      ? Math.round(
+          waitingPatients.reduce(
+            (sum, patient) =>
+              sum + calculateWait(patient),
+            0
+          ) / waitingPatients.length
+        )
+      : 0;
 
   return (
-    <div className="staff-page">
+    <div className="staff-dashboard">
 
-      {/* HEADER */}
       <header className="staff-header">
 
-        <div className="staff-brand">
-
-          <div className="staff-logo">
-            <HeartPulse size={27} />
-          </div>
-
-          <div className="brand-text">
-            <h1>
-              MediFlow <span>AI</span>
-            </h1>
-
-            <p>Staff Dashboard</p>
-          </div>
-
+        <div>
+          <h1>MediFlow AI</h1>
+          <p>Hospital Staff Dashboard</p>
         </div>
 
-        <div className="staff-header-actions">
+        <div className="header-actions">
 
           <button
-            className="refresh-btn"
-            onClick={() => loadPatients(true)}
+            onClick={loadPatients}
+            disabled={loading}
           >
             <RefreshCw size={18} />
             Refresh
           </button>
 
           <button
-            className="emergency-btn"
-            onClick={addEmergencyPatient}
+            onClick={() => navigate("/analytics")}
           >
-            <AlertTriangle size={18} />
-            Emergency Patient
+            Analytics
+          </button>
+
+          <button
+            onClick={() => navigate("/")}
+          >
+            Home
           </button>
 
         </div>
 
       </header>
 
-      <main className="staff-main">
+      <main className="staff-container">
 
-        {/* MESSAGE */}
-        {message && (
-          <div className="staff-message">
-            {message}
-          </div>
-        )}
-
-        {/* =========================
-            STATISTICS
-        ========================= */}
-
-        <section className="staff-stats">
+        <div className="staff-stats">
 
           <div className="staff-stat-card">
-
-            <div className="stat-icon">
-              <Users size={22} />
-            </div>
-
+            <Users size={26} />
             <div>
-              <p>Waiting Patients</p>
-              <h2>{waitingPatients.length}</h2>
+              <span>Waiting Patients</span>
+              <strong>{waitingPatients.length}</strong>
             </div>
-
           </div>
 
           <div className="staff-stat-card">
-
-            <div className="stat-icon">
-              <Clock3 size={22} />
-            </div>
-
+            <Clock size={26} />
             <div>
-              <p>Average Wait</p>
-              <h2>{averageWait} min</h2>
+              <span>Average Wait</span>
+              <strong>{averageWait} min</strong>
             </div>
-
           </div>
 
           <div className="staff-stat-card">
-
-            <div className="stat-icon">
-              <Activity size={22} />
-            </div>
-
+            <Activity size={26} />
             <div>
-              <p>Now Serving</p>
-              <h2>{servingPatients.length}</h2>
+              <span>Now Serving</span>
+              <strong>{servingPatients.length}</strong>
             </div>
-
           </div>
 
           <div className="staff-stat-card">
-
-            <div className="stat-icon">
-              <CheckCircle size={22} />
-            </div>
-
+            <CheckCircle size={26} />
             <div>
-              <p>Completed</p>
-              <h2>{completedPatients.length}</h2>
+              <span>Completed Today</span>
+              <strong>{completedPatients.length}</strong>
             </div>
-
           </div>
 
-        </section>
+        </div>
 
-        {/* =========================
-            CURRENT PATIENT
-        ========================= */}
+        {servingPatients.length > 0 && (
+          <section className="now-serving-section">
 
-        {currentPatient ? (
-
-          <section className="now-serving-card">
-
-            <div className="now-serving-content">
-
-              <p className="now-serving-label">
-                NOW SERVING
-              </p>
-
-              <h2>
-                {currentPatient.token} —{" "}
-                {currentPatient.name}
-              </h2>
-
-              <p>
-                {currentPatient.department}
-
-                {currentPatient.emergency &&
-                  " • Emergency"}
-              </p>
-
+            <div className="section-heading">
+              <h2>Now Serving</h2>
+              <span className="live-badge">
+                LIVE
+              </span>
             </div>
 
-            <button
-              className="complete-serving-btn"
-              onClick={() =>
-                completePatient(
-                  currentPatient.token
-                )
-              }
-              disabled={
-                completingToken ===
-                currentPatient.token
-              }
-            >
+            {servingPatients.map((patient) => (
+              <div
+                className="now-serving-card"
+                key={patient._id || patient.token}
+              >
 
-              <CheckCircle size={18} />
+                <div className="serving-token">
+                  {patient.token}
+                </div>
 
-              {completingToken ===
-              currentPatient.token
-                ? "Completing..."
-                : "Complete Patient"}
+                <div className="serving-details">
+                  <h3>{patient.name}</h3>
+                  <p>{patient.department}</p>
+                </div>
 
-            </button>
+                <button
+                  className="complete-button"
+                  onClick={() =>
+                    completePatient(patient.token)
+                  }
+                  disabled={actionLoading}
+                >
+                  <CheckCircle size={18} />
+                  Complete Patient
+                </button>
+
+              </div>
+            ))}
 
           </section>
+        )}
 
-        ) : (
-
+        {servingPatients.length === 0 && (
           <section className="ready-next-card">
-
-            <div className="ready-icon">
-              <PhoneCall size={25} />
-            </div>
 
             <div>
               <h2>Ready for Next Patient</h2>
-
               <p>
-                {waitingPatients.length > 0
-                  ? `${waitingPatients.length} patient${
-                      waitingPatients.length === 1
-                        ? ""
-                        : "s"
-                    } waiting in the queue.`
-                  : "No patients are currently waiting."}
+                No patient is currently being served.
               </p>
             </div>
 
             <button
-              className="call-next-btn"
+              className="call-next-button"
               onClick={callNextPatient}
               disabled={
+                actionLoading ||
                 waitingPatients.length === 0
               }
             >
-              <PhoneCall size={18} />
-              CALL NEXT PATIENT
+              <PhoneCall size={19} />
+              Call Next Patient
             </button>
 
           </section>
-
         )}
-
-        {/* =========================
-            LIVE QUEUE
-        ========================= */}
 
         <section className="queue-section">
 
-          <div className="section-heading">
+          <div className="queue-header">
 
             <div>
-              <h2>Live Patient Queue</h2>
-
+              <h2>Waiting Queue</h2>
               <p>
-                Monitor and manage patients in real time
+                {waitingPatients.length} patients waiting
               </p>
             </div>
 
-            <div className="queue-count">
-              {waitingPatients.length} Waiting
-            </div>
+            <button
+              className="emergency-button"
+              onClick={addEmergencyPatient}
+              disabled={actionLoading}
+            >
+              <AlertTriangle size={18} />
+              Add Emergency Patient
+            </button>
 
           </div>
 
-          <div className="queue-table-wrapper">
+          {loading ? (
+            <div className="loading-state">
+              <RefreshCw className="spinner" />
+              <p>Loading queue...</p>
+            </div>
+          ) : waitingPatients.length === 0 ? (
+            <div className="empty-state">
+              <CheckCircle size={40} />
+              <h3>No patients waiting</h3>
+              <p>
+                The queue is currently clear.
+              </p>
+            </div>
+          ) : (
+            <div className="table-container">
 
-            <table className="queue-table">
+              <table>
 
-              <thead>
-
-                <tr>
-                  <th>Token</th>
-                  <th>Patient Name</th>
-                  <th>Department</th>
-                  <th>Patients Ahead</th>
-                  <th>AI Wait</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {waitingPatients.length === 0 ? (
-
+                <thead>
                   <tr>
-
-                    <td
-                      colSpan="7"
-                      className="empty-queue"
-                    >
-                      <CheckCircle size={25} />
-
-                      <span>
-                        No patients are currently
-                        waiting.
-                      </span>
-                    </td>
-
+                    <th>Token</th>
+                    <th>Patient Name</th>
+                    <th>Department</th>
+                    <th>Patients Ahead</th>
+                    <th>AI Wait</th>
+                    <th>Status</th>
+                    <th>Action</th>
                   </tr>
+                </thead>
 
-                ) : (
+                <tbody>
 
-                  waitingPatients.map((patient) => {
+                  {waitingPatients.map((patient) => {
 
                     const ahead =
-                      getPatientsAhead(patient);
+                      calculatePatientsAhead(patient);
 
                     const wait =
-                      getWaitTime(patient);
+                      calculateWait(patient);
 
                     return (
-
                       <tr
-                        key={patient.token}
+                        key={
+                          patient._id ||
+                          patient.token
+                        }
                         className={
                           patient.emergency
                             ? "emergency-row"
@@ -665,175 +435,103 @@ function StaffDashboard() {
                         }
                       >
 
-                        {/* TOKEN */}
-
                         <td>
-
-                          <strong className="token-value">
+                          <strong>
                             {patient.token}
                           </strong>
 
-                        </td>
-
-                        {/* PATIENT */}
-
-                        <td>
-
-                          <div className="patient-name-cell">
-
-                            <div className="patient-small-icon">
-                              <UserRound size={16} />
-                            </div>
-
-                            <span>
-                              {patient.name}
+                          {patient.emergency && (
+                            <span className="emergency-badge">
+                              EMERGENCY
                             </span>
-
-                            {patient.emergency && (
-                              <span className="emergency-badge">
-                                Emergency
-                              </span>
-                            )}
-
-                          </div>
-
+                          )}
                         </td>
 
-                        {/* DEPARTMENT */}
+                        <td>{patient.name}</td>
 
                         <td>
                           {patient.department}
                         </td>
 
-                        {/* AHEAD */}
+                        <td>{ahead}</td>
 
                         <td>
-                          {ahead}
+                          {wait} min
                         </td>
 
-                        {/* AI WAIT */}
-
                         <td>
-                          <strong>
-                            {wait} min
-                          </strong>
-                        </td>
-
-                        {/* STATUS */}
-
-                        <td>
-
                           <span className="waiting-status">
                             Waiting
                           </span>
-
                         </td>
 
-                        {/* ACTION */}
-
                         <td>
-
                           <button
-                            className="call-patient-btn"
+                            className="call-button"
                             onClick={() =>
                               callPatient(
                                 patient.token
                               )
                             }
                             disabled={
-                              callingToken ===
-                                patient.token ||
-                              servingPatients.length >
-                                0
+                              actionLoading ||
+                              servingPatients.length > 0
                             }
                           >
-
-                            <PhoneCall size={15} />
-
-                            {callingToken ===
-                            patient.token
-                              ? "Calling..."
-                              : "CALL PATIENT"}
-
+                            <PhoneCall size={16} />
+                            Call Patient
                           </button>
-
                         </td>
 
                       </tr>
-
                     );
-                  })
+                  })}
 
-                )}
+                </tbody>
 
-              </tbody>
+              </table>
 
-            </table>
-
-          </div>
+            </div>
+          )}
 
         </section>
 
-        {/* =========================
-            WORKFLOW GUIDE
-        ========================= */}
-
-        <section className="staff-workflow">
+        <section className="workflow-section">
 
           <h2>Staff Workflow</h2>
 
           <div className="workflow-steps">
 
-            <div className="workflow-step">
+            <div>
               <span>1</span>
-              <div>
-                <strong>Call Patient</strong>
-                <p>
-                  Select a waiting patient.
-                </p>
-              </div>
+              <strong>Call Patient</strong>
+              <p>
+                Select a waiting patient.
+              </p>
             </div>
 
-            <div className="workflow-arrow">
-              →
-            </div>
-
-            <div className="workflow-step">
+            <div>
               <span>2</span>
-              <div>
-                <strong>Consult Patient</strong>
-                <p>
-                  Patient status becomes Serving.
-                </p>
-              </div>
+              <strong>Consult Patient</strong>
+              <p>
+                Patient is marked as serving.
+              </p>
             </div>
 
-            <div className="workflow-arrow">
-              →
-            </div>
-
-            <div className="workflow-step">
+            <div>
               <span>3</span>
-              <div>
-                <strong>Complete Patient</strong>
-                <p>
-                  Finish the consultation.
-                </p>
-              </div>
+              <strong>Complete Patient</strong>
+              <p>
+                Finish the consultation.
+              </p>
             </div>
 
-            <div className="workflow-arrow">
-              →
-            </div>
-
-            <div className="workflow-step">
+            <div>
               <span>4</span>
-              <div>
-                <strong>Call Next</strong>
-                <p>
-                  Move to the next patient.
-                </p>
-              </div>
+              <strong>Call Next</strong>
+              <p>
+                Move to the next patient.
+              </p>
             </div>
 
           </div>

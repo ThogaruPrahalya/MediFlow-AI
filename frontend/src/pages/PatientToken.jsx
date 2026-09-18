@@ -1,155 +1,114 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./PatientToken.css";
 
-const API = "http://localhost:5000/api";
-
-const hospitals = [
-  {
-    name: "MediFlow Demo Hospital",
-    location: "Main Campus",
-  },
-  {
-    name: "City Care Hospital",
-    location: "Central Campus",
-  },
-  {
-    name: "Apollo Hospital",
-    location: "Hyderabad",
-  },
-  {
-    name: "Yashoda Hospital",
-    location: "Hyderabad",
-  },
-];
-
-const departments = [
-  {
-    name: "General Medicine",
-    wait: 6,
-  },
-  {
-    name: "Cardiology",
-    wait: 8,
-  },
-  {
-    name: "Orthopedics",
-    wait: 7,
-  },
-  {
-    name: "Pediatrics",
-    wait: 5,
-  },
-  {
-    name: "Emergency",
-    wait: 3,
-  },
-];
+const API = `${import.meta.env.VITE_API_URL}/api`;
 
 function PatientToken() {
   const navigate = useNavigate();
 
-  const [hospital, setHospital] = useState("");
-  const [department, setDepartment] = useState("");
   const [name, setName] = useState("");
-
+  const [department, setDepartment] = useState("General Medicine");
   const [tokenData, setTokenData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const generateToken = async (e) => {
-    e.preventDefault();
+  const departments = {
+    "General Medicine": {
+      prefix: "A",
+      consultationTime: 6,
+    },
+    Cardiology: {
+      prefix: "C",
+      consultationTime: 8,
+    },
+    Orthopedics: {
+      prefix: "O",
+      consultationTime: 7,
+    },
+    Pediatrics: {
+      prefix: "P",
+      consultationTime: 5,
+    },
+    Dermatology: {
+      prefix: "D",
+      consultationTime: 6,
+    },
+    Neurology: {
+      prefix: "N",
+      consultationTime: 8,
+    },
+  };
 
+  const generateToken = async () => {
+    if (!name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+
+    setLoading(true);
     setError("");
 
-    if (!hospital) {
-      setError("Please select a hospital.");
-      return;
-    }
-
-    if (!department) {
-      setError("Please select a department.");
-      return;
-    }
-
-    if (!name.trim()) {
-      setError("Please enter patient name.");
-      return;
-    }
-
     try {
-      setLoading(true);
+      const response = await fetch(`${API}/patients`);
 
-      const selectedDepartment = departments.find(
-        (item) => item.name === department
-      );
-
-      const tokenNumber =
-        Math.floor(10 + Math.random() * 90);
-
-      let prefix = "A";
-
-      if (department === "Cardiology") {
-        prefix = "C";
-      } else if (department === "Orthopedics") {
-        prefix = "O";
-      } else if (department === "Pediatrics") {
-        prefix = "P";
-      } else if (department === "Emergency") {
-        prefix = "E";
+      if (!response.ok) {
+        throw new Error("Could not connect to backend.");
       }
 
-      const token = prefix + tokenNumber;
+      const patients = await response.json();
 
-      const response = await fetch(`${API}/patients`, {
+      const departmentPatients = patients.filter(
+        (patient) =>
+          patient.department === department &&
+          patient.status !== "Completed"
+      );
+
+      const selectedDepartment = departments[department];
+
+      const tokenNumber = departmentPatients.length + 1;
+
+      const token = `${selectedDepartment.prefix}${tokenNumber}`;
+
+      const patientsAhead = departmentPatients.filter(
+        (patient) => !patient.emergency
+      ).length;
+
+      const wait = patientsAhead * selectedDepartment.consultationTime;
+
+      const patient = {
+        token,
+        name: name.trim(),
+        hospital: "MediFlow Demo Hospital",
+        department,
+        wait,
+        patientsAhead,
+        emergency: false,
+        status: "Waiting",
+      };
+
+      const saveResponse = await fetch(`${API}/patients`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          token,
-          name: name.trim(),
-          hospital,
-          department,
-          wait: selectedDepartment?.wait || 6,
-          patientsAhead: 0,
-          emergency: department === "Emergency",
-          status: "Waiting",
-        }),
+        body: JSON.stringify(patient),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Unable to generate token"
-        );
+      if (!saveResponse.ok) {
+        throw new Error("Could not generate token.");
       }
 
-      const result = {
-        ...data,
-        hospital,
-        department,
-      };
+      const savedPatient = await saveResponse.json();
 
-      setTokenData(result);
+      localStorage.setItem("currentPatientToken", savedPatient.token);
+      localStorage.setItem("currentPatient", JSON.stringify(savedPatient));
 
-      localStorage.setItem(
-        "currentPatientToken",
-        data.token
-      );
-
-      localStorage.setItem(
-        "currentPatient",
-        JSON.stringify(data)
-      );
-
-    } catch (err) {
-      console.error("TOKEN ERROR:", err);
-
+      setTokenData(savedPatient);
+    } catch (error) {
+      console.error(error);
       setError(
-        err.message ||
-        "Backend connection failed. Please make sure the server is running."
+        "Unable to connect to MediFlow server. Please try again."
       );
     } finally {
       setLoading(false);
@@ -160,361 +119,128 @@ function PatientToken() {
     navigate("/dashboard");
   };
 
-  if (tokenData) {
-    return (
-      <div className="token-page">
+  return (
+    <div className="token-page">
+      <div className="token-container">
 
-        <div className="token-navbar">
-
-          <Link to="/" className="token-brand">
-            <div className="token-brand-icon">
-              ♥
+        {!tokenData ? (
+          <>
+            <div className="token-header">
+              <h1>Get Your Token</h1>
+              <p>
+                Enter your details to join the hospital queue
+              </p>
             </div>
 
-            <div>
-              <h2>
-                MediFlow <span>AI</span>
-              </h2>
+            <div className="token-form">
 
-              <p>Smart Hospital Queue</p>
+              <div className="form-group">
+                <label>Patient Name</label>
+
+                <input
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Select Department</label>
+
+                <select
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                >
+                  {Object.keys(departments).map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {error && (
+                <div className="error-message">
+                  {error}
+                </div>
+              )}
+
+              <button
+                className="generate-button"
+                onClick={generateToken}
+                disabled={loading}
+              >
+                {loading ? "Generating..." : "Generate My Token"}
+              </button>
             </div>
-          </Link>
+          </>
+        ) : (
+          <div className="token-result">
 
-          <Link to="/" className="token-home-link">
-            ← Home
-          </Link>
-
-        </div>
-
-
-        <main className="token-result-page">
-
-          <div className="success-icon">
-            ✓
-          </div>
-
-          <p className="success-label">
-            TOKEN GENERATED SUCCESSFULLY
-          </p>
-
-          <h1>
-            You're in the queue!
-          </h1>
-
-          <p className="success-description">
-            Keep this token safe and track your queue
-            position in real time.
-          </p>
-
-
-          <div className="token-result-card">
-
-            <div className="big-token">
-
-              <span>YOUR TOKEN</span>
-
-              <strong>
-                {tokenData.token}
-              </strong>
-
-              <small>
-                {tokenData.name}
-              </small>
-
+            <div className="success-icon">
+              ✓
             </div>
 
+            <h1>Token Generated Successfully!</h1>
+
+            <p className="result-subtitle">
+              Your place in the queue has been reserved.
+            </p>
+
+            <div className="big-token-card">
+              <span>Your Token Number</span>
+              <strong>{tokenData.token}</strong>
+            </div>
 
             <div className="result-details">
 
-              <div className="result-detail">
+              <div>
+                <span>Patient</span>
+                <strong>{tokenData.name}</strong>
+              </div>
+
+              <div>
                 <span>Hospital</span>
                 <strong>{tokenData.hospital}</strong>
               </div>
 
-              <div className="result-detail">
+              <div>
                 <span>Department</span>
                 <strong>{tokenData.department}</strong>
               </div>
 
-              <div className="result-detail">
+              <div>
                 <span>Patients Ahead</span>
-                <strong>0</strong>
-              </div>
-
-              <div className="result-detail">
-                <span>Estimated Wait</span>
-                <strong>
-                  {tokenData.wait || 0} min
-                </strong>
-              </div>
-
-            </div>
-
-
-            <div className="ai-result-box">
-
-              <div className="ai-result-icon">
-                ✦
+                <strong>{tokenData.patientsAhead}</strong>
               </div>
 
               <div>
-                <strong>
-                  AI Waiting-Time Prediction
-                </strong>
-
-                <p>
-                  Your estimated waiting time will
-                  update automatically as patients
-                  move through the queue.
-                </p>
+                <span>Estimated Wait</span>
+                <strong>{tokenData.wait} min</strong>
               </div>
 
             </div>
 
+            <div className="ai-prediction">
+              <h3>🤖 AI Queue Prediction</h3>
+              <p>
+                Based on current queue conditions, your estimated
+                waiting time is approximately{" "}
+                <strong>{tokenData.wait} minutes</strong>.
+              </p>
+            </div>
 
             <button
-              className="track-queue-button"
+              className="generate-button"
               onClick={trackQueue}
             >
-              Track My Queue →
-            </button>
-
-
-            <button
-              className="another-token-button"
-              onClick={() => {
-                setTokenData(null);
-                setName("");
-                setHospital("");
-                setDepartment("");
-                setError("");
-              }}
-            >
-              Generate Another Token
+              Track My Queue
             </button>
 
           </div>
-
-        </main>
-
+        )}
       </div>
-    );
-  }
-
-
-  return (
-    <div className="token-page">
-
-      <div className="token-navbar">
-
-        <Link to="/" className="token-brand">
-
-          <div className="token-brand-icon">
-            ♥
-          </div>
-
-          <div>
-            <h2>
-              MediFlow <span>AI</span>
-            </h2>
-
-            <p>Smart Hospital Queue</p>
-          </div>
-
-        </Link>
-
-        <div className="token-nav-links">
-
-          <Link to="/">
-            Home
-          </Link>
-
-          <Link to="/login">
-            Login
-          </Link>
-
-        </div>
-
-      </div>
-
-
-      <main className="token-main">
-
-        <div className="token-heading">
-
-          <p>
-            PATIENT REGISTRATION
-          </p>
-
-          <h1>
-            Get Your Digital Token
-          </h1>
-
-          <span>
-            Select your hospital and department to
-            join the queue.
-          </span>
-
-        </div>
-
-
-        <form
-          className="token-form-card"
-          onSubmit={generateToken}
-        >
-
-          {/* HOSPITAL */}
-
-          <div className="form-group">
-
-            <label>
-              Select Hospital
-            </label>
-
-            <select
-              value={hospital}
-              onChange={(e) =>
-                setHospital(e.target.value)
-              }
-            >
-              <option value="">
-                Choose a hospital
-              </option>
-
-              {hospitals.map((item) => (
-                <option
-                  key={item.name}
-                  value={item.name}
-                >
-                  {item.name} — {item.location}
-                </option>
-              ))}
-            </select>
-
-          </div>
-
-
-          {/* DEPARTMENT */}
-
-          <div className="form-group">
-
-            <label>
-              Select Department
-            </label>
-
-            <select
-              value={department}
-              onChange={(e) =>
-                setDepartment(e.target.value)
-              }
-            >
-              <option value="">
-                Choose a department
-              </option>
-
-              {departments.map((item) => (
-                <option
-                  key={item.name}
-                  value={item.name}
-                >
-                  {item.name}
-                </option>
-              ))}
-            </select>
-
-          </div>
-
-
-          {/* NAME */}
-
-          <div className="form-group">
-
-            <label>
-              Patient Name
-            </label>
-
-            <input
-              type="text"
-              placeholder="Enter patient full name"
-              value={name}
-              onChange={(e) =>
-                setName(e.target.value)
-              }
-            />
-
-          </div>
-
-
-          {/* INFO */}
-
-          {department && (
-            <div className="department-info">
-
-              <span>
-                Average consultation time
-              </span>
-
-              <strong>
-                {
-                  departments.find(
-                    (item) =>
-                      item.name === department
-                  )?.wait
-                }{" "}
-                min / patient
-              </strong>
-
-            </div>
-          )}
-
-
-          {error && (
-            <div className="token-error">
-              {error}
-            </div>
-          )}
-
-
-          <button
-            type="submit"
-            className="generate-token-button"
-            disabled={loading}
-          >
-            {loading
-              ? "Generating Token..."
-              : "Generate Token →"}
-          </button>
-
-
-          <p className="form-note">
-            Your queue information will be stored
-            securely for this hospital session.
-          </p>
-
-        </form>
-
-
-        <div className="token-features">
-
-          <div>
-            <span>✓</span>
-            Digital token
-          </div>
-
-          <div>
-            <span>✓</span>
-            Live queue tracking
-          </div>
-
-          <div>
-            <span>✓</span>
-            AI waiting prediction
-          </div>
-
-        </div>
-
-      </main>
-
     </div>
   );
 }
